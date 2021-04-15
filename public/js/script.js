@@ -45,20 +45,17 @@ function handleResults(data) {
 }
 function ProcessCommand(UserText) {
   if (UserText.includes('mail') || UserText.includes('Email')) {
-    // mailContent();
-    // editcontent();
-    let finalData  = {senderEmailId: "Navjot Singh at the rate gmail.com", mailSubject: "application for internship", mailText: "Kala"};
-    const data = `
-    <form>
-      <input type="text" name="senderEmailId" value=${finalData.senderEmailId} />
-      <input type="text" name="mailSubject" value=${finalData.mailSubject}/>
-      <input type="text" name="mailText" value=${finalData.mailText}/>
-      <button type="submit">Submit</button>
-    </form>`;
-    document.getElementById('data').innerHTML = data;
+    mailContent();
+
   } else if (UserText.includes('meeting') || UserText.includes('meet')) {
     Speak('Arranging a google meet');
     recordContent(4);
+    setTimeout(() => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/meeting', true);
+      xhr.send({ message: 'we are arranging a meet' });
+    }, 3000);
+
   } else if (UserText.includes('instagram')) {
     Speak('Opening Instagram...');
     window.open('https://www.instagram.com/');
@@ -147,16 +144,11 @@ function mailContent() {
     Speak('Ok ! Wait for few seconds send the mail..');
     console.log(finalData);
     localStorage.setItem('data', JSON.stringify(finalData));
-    const data = `
-    <form>
-      <input type="text" name="senderEmailId" value=${finalData.senderEmailId} />
-      <input type="text" name="mailSubject" value=${finalData.mailSubject}/>
-      <input type="text" name="mailText" value=${finalData.mailText}/>
-      <button type="submit">Submit</button>
-    </form>`;
-    document.getElementById('data').value = data;
-    // fs.writeFileSync("senderDetails.json", JSON.stringify(finalData));
-    // mailing.main();
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/sendmail', true);
+    xhr.send(JSON.stringify(finalData));
+
   }, 45000);
 }
 

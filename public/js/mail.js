@@ -1,7 +1,7 @@
 const puppy = require('puppeteer');
 
 function main() {
-  let { emailId, pwd } = require('./myInfo.json');
+  let { emailId, pwd } = require('.//myInfo.json');
   // let {
   //   senderEmailId,
   //   mailSubject,
@@ -147,5 +147,3 @@ function main() {
       console.log(err);
     });
 }
-
-main();
