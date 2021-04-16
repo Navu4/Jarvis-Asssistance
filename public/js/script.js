@@ -6,7 +6,14 @@ const btn = document.getElementById('btn');
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// Start
+// FinalData for Mail Json file containing senderEmailId, mailSubject, mailContent
+let finalData = {};
+
+// Meeting data
+let meetingData = {};
+
+// Start Listening
+// Open mic of the system and listen to the first command
 function startListening() {
   let recog = new SpeechRecognition();
   recog.start();
@@ -17,15 +24,26 @@ function startListening() {
   };
 }
 
-function mailingListen() {
-  let recog = new SpeechRecognition();
-  recog.start();
-  recog.onstart = console.log('Started Listening .. ');
+// Listen to different content of Mail and meeting
+function Listen() {
+  const ListeningPromise = new Promise((resolve, rejects) => {
+    let recog = new SpeechRecognition();
+    recog.start();
+    recog.onstart = console.log('Started Listening');
 
-  recog.onresult = function (data) {
-    return data;
-  };
+    recog.onspeechend = function () {
+      recog.stop();
+    };
+
+    recog.onresult = function (data) {
+      resolve(data);
+    };
+  });
+
+  return ListeningPromise;
 }
+
+// ----------------------------------------------------------------
 
 // Speak Text Entered
 function Speak(TEXT) {
@@ -35,7 +53,9 @@ function Speak(TEXT) {
   window.speechSynthesis.speak(utter);
 }
 
-// Handle Results
+// -------------------------------------------------------------------
+
+// Handle Results/Data
 function handleResults(data) {
   let text = data.results[0][0].transcript;
   text = text.toLowerCase();
@@ -43,19 +63,14 @@ function handleResults(data) {
 
   ProcessCommand(text);
 }
+
+// Processes the User Command and work accordingly
 function ProcessCommand(UserText) {
   if (UserText.includes('mail') || UserText.includes('Email')) {
     mailContent();
-
   } else if (UserText.includes('meeting') || UserText.includes('meet')) {
     Speak('Arranging a google meet');
-    recordContent(4);
-    setTimeout(() => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/meeting', true);
-      xhr.send({ message: 'we are arranging a meet' });
-    }, 3000);
-
+    meetingContent(UserText);
   } else if (UserText.includes('instagram')) {
     Speak('Opening Instagram...');
     window.open('https://www.instagram.com/');
@@ -67,12 +82,13 @@ function ProcessCommand(UserText) {
     window.open('https://www.google.com/');
   } else if (UserText.includes('the') && UserText.includes('time')) {
     console.log('The time is :' + getCurrentTime());
-  } else if (UserText.includes('mail') || UserText.includes('mail')) {
-    Speak('Please...Tell the sender Mail Id');
   } else {
     console.log('I cant perform task : $(text)');
+    Speak('I cant perform task');
   }
 }
+
+// -------------------------------------------------------------------
 
 // Current Time Function
 function getCurrentTime() {
@@ -82,6 +98,8 @@ function getCurrentTime() {
   let minutes = date.getMinutes();
   let currentTimeIs = `${hour} ${minutes}`;
   Speak('The Time Is... ' + currentTimeIs);
+
+  return currentTimeIs;
 }
 
 // Intro Lines of Start Button
@@ -91,83 +109,145 @@ function intro() {
   window.speechSynthesis.speak(speech);
 }
 
-// recording the content
-let meetingData = {};
-let finalData = {};
-function recordContent(value) {
-  var text;
-  let recognition = new SpeechRecognition();
-  recognition.start();
-  recognition.onstart = function () {
-    console.log('You can speak now!!!');
-  };
+// -------------------------------------------------------------------
 
-  recognition.onspeechend = function () {
-    // when user is done speaking
-    recognition.stop();
-  };
-
-  var content;
-  recognition.onresult = function (event) {
-    text = event.results[0][0].transcript;
-    content = text;
-    // document.getElementById('result').innerHTML = text;
-    console.log(content);
-    if (value == 1) {
-      finalData['senderEmailId'] = text;
-    } else if (value == 2) {
-      // text = text.charAt(0).toUpperCase() + text.slice(1);
-      finalData['mailSubject'] = text;
-    } else if (value == 3) {
-      finalData['mailText'] = text;
-    } else if (value == 4) {
-      meetingData['meetingType'] = text;
-    }
-  };
-}
-
+// Mail Content
+// Ask of EmailID, Subject and Content of mail
 function mailContent() {
   Speak('Tell the sender Mail Id');
-  recordContent(1);
-
-  setTimeout(function () {
-    Speak('Tell me the Mail Subject');
-    recordContent(2);
-  }, 14000);
-
-  setTimeout(function () {
-    Speak('Tell me the Mail Content');
-    recordContent(3);
-  }, 24000);
-
-  setTimeout(() => {
-    Speak('Ok ! Wait for few seconds send the mail..');
-    console.log(finalData);
-    localStorage.setItem('data', JSON.stringify(finalData));
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/sendmail', true);
-    xhr.send(JSON.stringify(finalData));
-
-  }, 45000);
+  Listen()
+    .then((data) => {
+      let text = data.results[0][0].transcript;
+      text = text.split(' ').join('').toLowerCase();
+      if (text.includes('attherate')) {
+        text = text.replace('attherate', '@');
+      }
+      finalData['senderEmailId'] = text;
+    })
+    .then(() => {
+      Speak('Tell me the Mail Subject');
+    })
+    .then(() => {
+      Listen()
+        .then((data) => {
+          let text = data.results[0][0].transcript;
+          text = text.charAt(0).toUpperCase() + text.slice(1);
+          console.log(text);
+          finalData['mailSubject'] = text;
+        })
+        .then(() => {
+          Speak('Tell me the Mail Content');
+        })
+        .then(() => {
+          Listen()
+            .then((data) => {
+              let text = data.results[0][0].transcript;
+              text = text.charAt(0).toUpperCase() + text.slice(1);
+              console.log(text + '.');
+              finalData['mailText'] = text + '.';
+            })
+            .then(() => {
+              Speak('Ok ! Wait for few seconds send the mail..');
+              console.log(finalData);
+            })
+            .then(() => {
+              axios({
+                url: '/sendMail',
+                method: 'POST',
+                data: finalData,
+              });
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
 }
 
-function editcontent() {
-  let text = finalData['senderEmailId'];
-  let Id;
-  text = text.split(' ').join('').toLowerCase();
-  if (text.includes('attherate')) {
-    text = text.replace('attherate', '@');
-  }
-  let gif = text.split('@');
-  if (gif[1].includes('gmail')) {
-    Id = gif[0] + '@gmail.com';
-  } else {
-    Id = gif[0] + '@yahoo.com';
-  }
-  finalData['senderEmailId'] = Id;
+// -------------------------------------------------------------------
 
-  text = finalData['mailSubject'];
-  text = text.charAt(0).toUpperCase() + text.slice(1);
-  finalData['mailSubject'] = text;
+// Arranging Different Meeting
+function meetingContent(data) {
+  if (data.includes('schedule')) {
+    Speak("What's the Date for the meeting..");
+    Listen()
+      .then((listen) => {
+        let text = listen.results[0][0].transcript;
+        text = text.toLowerCase();
+        console.log(text);
+
+        meetingData['meetingType'] = 'schedule';
+        meetingData['meetingDate'] = text;
+      })
+      .then(()=>{
+        return new Promise((resolve, reject)=>{
+          setTimeout(() => {
+            resolve();
+          }, 3000);
+        })
+      })
+      .then(() => {
+        Speak('What are the timings...');
+        Listen()
+          .then((voice) => {
+            let text = voice.results[0][0].transcript;
+            text = text.toLowerCase();
+            text = text.split('to');
+            let numb = text[0].match(/\d/g);
+            numb = numb.join('');
+            meetingData['meetingStartTime'] = numb;
+
+            numb = text[1].match(/\d/g);
+            numb = numb.join('');
+            meetingData['meetingStartTime'] = numb;
+          })
+          .then(() => {
+            Speak('Please Tell the meeting Guest Email one by one..');
+            meetingData['GuestList'] = [];
+          })
+          .then(() => {
+            let i = 0;
+            do {
+              Listen()
+                .then((value) => {
+                  let text = value.results[0][0].transcript;
+                  text = text.split(' ').join('').toLowerCase();
+                  if (text.includes('attherate')) {
+                    text = text.replace('attherate', '@');
+                  }
+                  meetingData['GuestList'].push(text);
+                })
+                .then(() => {
+                  Speak('Ok next..');
+                  i = i + 1;
+                })
+                .catch((err) => {
+                  console.log(err);
+                });
+            } while (i < 5);
+          })
+          .then(() => {
+            Speak('Ok.. Scheduling a meet');
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  } else {
+    meetingData['meetingType'] = 'instant';
+    axios({
+      url: '/meeting',
+      method: 'POST',
+      data: meetingData,
+    });
+  }
 }
