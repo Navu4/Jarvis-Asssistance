@@ -5,7 +5,7 @@ const fs = require('fs');
 const express = require('express');
 const { REPL_MODE_SLOPPY } = require('repl');
 const app = express();
-const bodyParser = require('body-parser')
+const bodyParser = require('body-parser');
 const port = 3000;
 
 // Static Files
@@ -36,14 +36,14 @@ app.post('/meeting', (req, res, next) => {
       }, time);
     });
   }
-  
+
   async function main() {
     let browser = await puppy.launch({
       headless: false,
       defaultViewport: false,
       args: ['--start-maximized'],
     });
-  
+
     let pages = await browser.pages();
     let tab = pages[0];
     await tab.goto('https://apps.google.com/meet/');
@@ -70,18 +70,17 @@ app.post('/meeting', (req, res, next) => {
     );
     let listOfMeetingType = await tab.$$('.VfPpkd-StrnGf-rymPhb.DMZ54e li');
     console.log(listOfMeetingType.length);
+    await timeout(3000);
     await listOfMeetingType[1].click();
-    
   }
   main();
 });
 
 app.post('/sendMail', (req, res, next) => {
-  console.log("Entering...")
-  // fs.writeFileSync("./public/data/senderDetails.json", req.body); 
+  console.log('Entering...');
+  // fs.writeFileSync("./public/data/senderDetails.json", req.body);
   const { senderEmailId, mailSubject, mailText } = req.body;
   let { emailId, pwd } = require('./public/data/myInfo.json');
-
 
   async function timeout(time) {
     return new Promise(function (resolve, reject) {
@@ -91,25 +90,25 @@ app.post('/sendMail', (req, res, next) => {
       }, time);
     });
   }
-  
+
   async function main() {
     let browser = await puppy.launch({
       headless: false,
       defaultViewport: false,
       args: ['--start-maximized'],
     });
-  
+
     let pages = await browser.pages();
     let tab = pages[0];
     await tab.goto(
       'https://accounts.google.com/ServiceLogin/identifier?service=mail&passive=true&rm=false&continue=https%3A%2F%2Fmail.google.com%2Fmail%2F&ss=1&scc=1&ltmpl=default&ltmplcache=2&emr=1&osid=1&flowName=GlifWebSignIn&flowEntry=ServiceLogin'
     );
-    
-  //   await tab.waitForNavigation({waitUntil:"networkidle0"});
+
+    //   await tab.waitForNavigation({waitUntil:"networkidle0"});
     await tab.waitForSelector('.whsOnd.zHQkBf ', { visible: true });
     await tab.click('.whsOnd.zHQkBf'); // click on email button
     await tab.type('#identifierId', emailId); // type email ID
-  //   await timeout(3000);
+    //   await timeout(3000);
     await tab.click('.VfPpkd-RLmnJb'); // Click on the next button
     await timeout(3000);
     await tab.click('.whsOnd.zHQkBf'); // click on password
@@ -130,14 +129,66 @@ app.post('/sendMail', (req, res, next) => {
     }); // getting the text from Json file for typing message in compose-mail box
     await tab.click('.T-I.J-J5-Ji.aoO.v7.T-I-atl.L3'); // click on send button
     await tab.waitForSelector('.gb_Da.gbii', { visible: true });
-    await  tab.click('.gb_Da.gbii');
+    await tab.click('.gb_Da.gbii');
     await timeout(7000);
     await tab.click('.gb_Db.gb_Vf.gb_4f.gb_Re.gb_4c'); // clicking on signout
     await browser.close();
   }
-  
+
   main();
-  res.json(true)
+  res.json(true);
+});
+
+app.post('/youtubeSearch', (req, res, next) => {
+  console.log('Entering...');
+  let { text } = req.body;
+
+  async function main() {
+    let browser = await puppy.launch({
+      headless: false,
+      defaultViewport: false,
+      args: ['--start-maximized'],
+    });
+
+    let pages = await browser.pages();
+    let tab = pages[0];
+
+    await tab.goto('https://youtube.com/');
+    await tab.waitForSelector('#search.ytd-searchbox', { visible: true });
+    await tab.click('#search.ytd-searchbox');
+    await tab.type('#search.ytd-searchbox', text);
+
+    await tab.click('#search-icon-legacy.style-scope.ytd-searchbox');
+  }
+
+  main();
+  res.json(true);
+});
+
+app.post('/googleSearch', (req, res, next) => {
+  console.log('Entering...');
+  let { text } = req.body;
+  console.log(text);
+  async function main() {
+    let browser = await puppy.launch({
+      headless: false,
+      defaultViewport: false,
+      args: ['--start-maximized'],
+    });
+
+    let pages = await browser.pages();
+    let tab = pages[0];
+
+    await tab.goto('https://www.google.com/');
+    await tab.waitForSelector('.gLFyf.gsfi', { visible: true });
+    await tab.click('.gLFyf.gsfi');
+    await tab.type('.gLFyf.gsfi', text, { delay: 100 });
+
+    await tab.click('.gNO89b');
+  }
+
+  main();
+  res.json(true);
 });
 // Listen on port 3000
 app.listen(port, () => console.log(`listening on port ${port}`));

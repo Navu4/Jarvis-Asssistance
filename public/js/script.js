@@ -12,6 +12,9 @@ let finalData = {};
 // Meeting data
 let meetingData = {};
 
+// Data
+let searchData = {};
+
 // Start Listening
 // Open mic of the system and listen to the first command
 function startListening() {
@@ -71,15 +74,23 @@ function ProcessCommand(UserText) {
   } else if (UserText.includes('meeting') || UserText.includes('meet')) {
     Speak('Arranging a google meet');
     meetingContent(UserText);
-  } else if (UserText.includes('instagram')) {
+  } else if (UserText.includes('instagram') && UserText.includes('open')) {
     Speak('Opening Instagram...');
     window.open('https://www.instagram.com/');
-  } else if (UserText.includes('whatsapp')) {
+  } else if (UserText.includes('whatsapp') && UserText.includes('open')) {
     Speak('Opening whatsApp..');
     window.open('https://web.whatsapp.com/');
-  } else if (UserText.includes('google')) {
+  } else if (UserText.includes('google') && UserText.includes('open')) {
     Speak('Opening Google');
     window.open('https://www.google.com/');
+  } else if (UserText.includes('google') && UserText.includes('search')) {
+    Speak('Doing a google search for you');
+    googleSearch();
+  } else if (UserText.includes('youtube') && UserText.includes('open')) {
+    Speak('Opening youtube');
+  } else if (UserText.includes('youtube') && UserText.includes('search')) {
+    Speak('Doing a youtube search for you');
+    youtubeSearch();
   } else if (UserText.includes('the') && UserText.includes('time')) {
     console.log('The time is :' + getCurrentTime());
   } else {
@@ -185,12 +196,12 @@ function meetingContent(data) {
         meetingData['meetingType'] = 'schedule';
         meetingData['meetingDate'] = text;
       })
-      .then(()=>{
-        return new Promise((resolve, reject)=>{
+      .then(() => {
+        return new Promise((resolve, reject) => {
           setTimeout(() => {
             resolve();
           }, 3000);
-        })
+        });
       })
       .then(() => {
         Speak('What are the timings...');
@@ -251,3 +262,68 @@ function meetingContent(data) {
     });
   }
 }
+
+// Google Search
+async function timeout(time) {
+  return new Promise(function (resolve, reject) {
+    // Asynchronous setTimeout function
+    setTimeout(() => {
+      resolve();
+    }, time);
+  });
+}
+
+async function googleSearch() {
+  await timeout(3000);
+  Speak('Please tell what do you want to google..');
+  Listen()
+    .then((data) => {
+      let text = data.results[0][0].transcript;
+      text = text.charAt(0).toUpperCase() + text.slice(1);
+      console.log(text);
+
+      return text;
+    })
+    .then((val) => {
+      searchData['text'] = val;
+      console.log(searchData);
+    })
+    .then(() => {
+      axios({
+        url: '/googleSearch',
+        method: 'POST',
+        data: searchData,
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+}
+
+async function youtubeSearch() {
+  await timeout(3000);
+  Speak('Please tell how do to want to youtube..');
+  Listen()
+    .then((data) => {
+      let text = data.results[0][0].transcript;
+      text = text.charAt(0).toUpperCase() + text.slice(1);
+      console.log(text);
+
+      return text;
+    })
+    .then((val) => {
+      searchData['text'] = val;
+      console.log(searchData);
+    })
+    .then(() => {
+      axios({
+        url: '/youtubeSearch',
+        method: 'POST',
+        data: searchData,
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+}
+// ---------------------------------------------------------------
